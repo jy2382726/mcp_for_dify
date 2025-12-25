@@ -37,3 +37,20 @@ async def upload_file(
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.delete("/delete")
+async def delete_file(object_name: str):
+    """
+    删除文件接口
+    
+    Args:
+        object_name: 要删除的对象名称
+        
+    Returns:
+        dict: 删除结果
+    """
+    try:
+        result = await minio_service.delete_file(object_name=object_name)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
