@@ -3,6 +3,7 @@ from starlette.routing import Mount
 from app.core.config import get_settings
 from app.core.logger import setup_logging
 from app.mcp.server import mcp, init_mcp
+from app.api.main import api_router
 
 # 加载配置
 settings = get_settings()
@@ -19,6 +20,9 @@ app = FastAPI(
     description="MCP Server for Dify Integration",
     version="1.0.0"
 )
+
+# 挂载 API 路由
+app.include_router(api_router, prefix="/api/v1")
 
 # 挂载 MCP SSE 服务
 # Dify 将通过 SSE 连接到此端点

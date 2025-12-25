@@ -758,43 +758,43 @@ class TextSplitterService:
 text_splitter_service = TextSplitterService()
 
 
-if __name__ == "__main__":
-    async def main():
-        # 读取demo.txt
-        try:
-            with open("/root/code/mcp_for_dify/demo/demo.txt", "r", encoding="utf-8") as f:
-                demo_text = f.read()
-        except FileNotFoundError:
-            print("Demo file not found, using placeholder text.")
-            demo_text = "Title\n# Header 1\nContent under header 1.\n\n# Header 2\nContent under header 2."
+# if __name__ == "__main__":
+#     async def main():
+#         # 读取demo.txt
+#         try:
+#             with open("/root/code/mcp_for_dify/demo/demo.txt", "r", encoding="utf-8") as f:
+#                 demo_text = f.read()
+#         except FileNotFoundError:
+#             print("Demo file not found, using placeholder text.")
+#             demo_text = "Title\n# Header 1\nContent under header 1.\n\n# Header 2\nContent under header 2."
             
-        # 处理 demo.txt 中的转义换行符 (因为 demo.txt 内容似乎来自 JSON 字符串)
-        demo_text = demo_text.replace("\\n", "\n")
+#         # 处理 demo.txt 中的转义换行符 (因为 demo.txt 内容似乎来自 JSON 字符串)
+#         demo_text = demo_text.replace("\\n", "\n")
             
-        # 初始化服务
-        service = TextSplitterService()
+#         # 初始化服务
+#         service = TextSplitterService()
         
-        # 测试切分
-        result = await service.split(
-            mode="pdf",
-            content=demo_text,
-            parent_block_size=1536,
-            sub_block_size=768,
-            parent_separator="/--P--/",
-            sub_separator="/--S--/",
-        )
+#         # 测试切分
+#         result = await service.split(
+#             mode="pdf",
+#             content=demo_text,
+#             parent_block_size=1536,
+#             sub_block_size=768,
+#             parent_separator="/--P--/",
+#             sub_separator="/--S--/",
+#         )
         
-        res_text = result["result"]
+#         res_text = result["result"]
         
-        print(f"Total Length: {len(res_text)}")
-        print("-" * 20 + " RESULT START " + "-" * 20)
-        print(res_text)
-        print("-" * 20 + " RESULT END " + "-" * 20)
+#         print(f"Total Length: {len(res_text)}")
+#         print("-" * 20 + " RESULT START " + "-" * 20)
+#         print(res_text)
+#         print("-" * 20 + " RESULT END " + "-" * 20)
         
-        # 验证分隔符
-        p_sep_count = res_text.count("\n\n\n\n")
-        s_sep_count = res_text.count("\n\n\n")
-        print(f"Parent Separator Count: {p_sep_count}")
-        print(f"Sub Separator Count: {s_sep_count}")
+#         # 验证分隔符
+#         p_sep_count = res_text.count("\n\n\n\n")
+#         s_sep_count = res_text.count("\n\n\n")
+#         print(f"Parent Separator Count: {p_sep_count}")
+#         print(f"Sub Separator Count: {s_sep_count}")
 
-    asyncio.run(main())
+#     asyncio.run(main())

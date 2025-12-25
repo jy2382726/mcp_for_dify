@@ -20,3 +20,4 @@ def init_mcp():
     # 动态导入插件以触发注册
     import app.plugins.echo
     import app.plugins.text_splitter
+    import app.plugins.minio_tools
