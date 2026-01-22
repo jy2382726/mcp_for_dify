@@ -12,6 +12,7 @@ async def text_splitter(
     parent_separator: str = "\n\n\n\n",
     sub_separator: str = "\n\n\n",
     preview_url: str = "",
+    overlap: int = 0,
 ) -> Dict[str, Any]:
     """
     文本分块工具
@@ -25,6 +26,7 @@ async def text_splitter(
         parent_separator: 父块之间的分隔符 (默认 "\n\n\n\n")
         sub_separator: 子块之间的分隔符 (默认 "\n\n\n")
         preview_url: 当 mode=='image' 时必填的图片预览地址
+        overlap: 仅针对 PDF 模式，相邻父块之间的重叠字符数 (默认 0)
         
     Returns:
         Dict[str, Any]: 包含处理后文本的字典 {"result": splited_content}
@@ -37,6 +39,7 @@ async def text_splitter(
         sub_block_size=sub_block_size,
         parent_separator=parent_separator,
         sub_separator=sub_separator,
-        preview_url=preview_url
+        preview_url=preview_url,
+        overlap=overlap
     )
     return result

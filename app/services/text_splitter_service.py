@@ -22,6 +22,7 @@ class TextSplitterService:
         parent_separator: str = "\n\n\n\n",
         sub_separator: str = "\n\n\n",
         preview_url: str = "",
+        overlap: int = 0,
     ) -> Dict[str, Any]:
         """
         统一入口：根据 mode 调度对应的分块函数。
@@ -37,7 +38,8 @@ class TextSplitterService:
                 parent_block_size, 
                 sub_block_size,
                 parent_separator=parent_separator,
-                sub_separator=sub_separator
+                sub_separator=sub_separator,
+                overlap=overlap
             )
         elif m in ("table", "md_table", "markdown"):
             # 专用表格分块逻辑
@@ -308,7 +310,8 @@ class TextSplitterService:
         parent_block_size: int, 
         sub_block_size: int,
         parent_separator: str = "\n\n\n\n",
-        sub_separator: str = "\n\n\n"
+        sub_separator: str = "\n\n\n",
+        overlap: int = 0
     ) -> str:
         """PDF 文本分块：重写逻辑"""
         
@@ -331,7 +334,7 @@ class TextSplitterService:
         
         # 4. 一级粗切 + 贪婪合并
         # 保证每个分块结尾有一个父块分隔符 (在 Join 时处理)
-        coarse_blocks = await self._coarse_split_and_merge(content, p_target, tokens)
+        coarse_blocks = await self._coarse_split_and_merge(content, p_target, tokens, overlap)
         
         # 5. 父块细化 (Parent Refinement)
         # 校验粗切的每个分块是否符合父块大小上限，如果超过上限，再该块内部按段落结构拆分出多个父块。
@@ -457,12 +460,67 @@ class TextSplitterService:
         
         return text, tokens
 
-    async def _coarse_split_and_merge(self, text: str, merge_limit: int, tokens: Dict[str, str]) -> List[str]:
+    async def _extract_overlap_suffix(self, text: str, overlap_size: int, tokens: Dict[str, str]) -> str:
+        """
+        从文本末尾提取指定真实长度的后缀，保持 Token 完整性。
+        """
+        if overlap_size <= 0 or not text:
+            return ""
+
+        # 1. 解析 Token 结构
+        # finditer 按顺序返回，我们需要反向处理
+        # 简单起见，先按 Token 切分，得到 [text, token, text, token...]
+        parts = re.split(r"(<<ATOMIC_\w+_\d+>>)", text)
+        
+        suffix_parts = []
+        current_len = 0
+        
+        # 反向遍历
+        for part in reversed(parts):
+            if not part: continue
+            
+            if part.startswith("<<ATOMIC_") and part.endswith(">>"):
+                # Token
+                token_content = tokens.get(part, "")
+                # 如果 Token ID 不在 tokens 中（虽然不应该），退化为 ID 长度
+                t_len = len(token_content) if token_content else len(part)
+                
+                # 检查是否可以加入
+                # 策略：如果 current_len 已经接近 overlap，就不加了。
+                # 如果 Token 导致长度超过 overlap * 1.5 (tolerance)，则不加，并停止。
+                if current_len + t_len > overlap_size * 1.5 and current_len > 0:
+                    # 已经有一定 overlap 了，放弃这个大 Token
+                    break
+                
+                suffix_parts.append(part)
+                current_len += t_len
+            else:
+                # 普通文本
+                needed = overlap_size - current_len
+                if needed <= 0:
+                    break
+                
+                if len(part) <= needed:
+                    suffix_parts.append(part)
+                    current_len += len(part)
+                else:
+                    # 截取后 needed 个字符
+                    suffix_parts.append(part[-needed:])
+                    current_len += needed
+                    break # 满足要求了
+            
+            if current_len >= overlap_size:
+                break
+                
+        return "".join(reversed(suffix_parts))
+
+    async def _coarse_split_and_merge(self, text: str, merge_limit: int, tokens: Dict[str, str], overlap: int = 0) -> List[str]:
         """
         按一级标题 # 切分，然后进行贪婪合并。
         1. 识别 (?=^# ) 或 (?=\n# ) 进行切分。
         2. 遍历切分后的块，进行合并，直到达到 merge_limit。
         3. 使用 _get_real_length 计算真实长度（展开 Token）。
+        4. (新增) 每次生成新块时，提取前一个块的 overlap 长度后缀作为新块开头。
         """
         # 1. Split using lookahead to keep the delimiter with the following block
         # Pattern: Split BEFORE a newline followed by # and space, OR start of string followed by # and space
@@ -484,7 +542,13 @@ class TextSplitterService:
                 # Exceeds limit, emit current_block if exists
                 if current_block:
                     merged_blocks.append(current_block)
-                current_block = part
+                    
+                    # Calculate overlap suffix for the next block
+                    overlap_suffix = await self._extract_overlap_suffix(current_block, overlap, tokens)
+                    current_block = overlap_suffix + part
+                else:
+                    # part itself is bigger than limit?
+                    current_block = part
         
         if current_block:
             merged_blocks.append(current_block)
