@@ -312,6 +312,11 @@ class TextSplitterService:
     ) -> str:
         """PDF 文本分块：重写逻辑"""
         
+        # 0. 预处理：处理转义换行符
+        # 用户反馈输入中包含 literal \n，需要转义为真实换行符
+        parent_separator = parent_separator.replace("\\n", "\n")
+        sub_separator = sub_separator.replace("\\n", "\n")
+
         # 1. 确定切分限制
         p_target, p_max, s_target, s_max = await self._determine_effective_limits(parent_block_size, sub_block_size)
         
